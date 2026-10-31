@@ -20,7 +20,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    outputs:
+      has_staging: ${{ steps.branch.outputs.has_staging }}
+    steps:
+      - name: Check staging branch exists
+        id: branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${{ github.repository }}/branches/staging" --silent 2>/dev/null; then
+            echo "has_staging=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_staging=false" >> "$GITHUB_OUTPUT"
+            echo "staging branch does not exist, nothing to do"
+          fi
+
   resolve:
+    needs: check
+    if: needs.check.outputs.has_staging == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
